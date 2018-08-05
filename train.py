@@ -153,7 +153,7 @@ def train(A_train, B_train, A_dev, B_dev, y_train, y_dev, word_vector):
             data_train = zip(A_train, B_train, y_train)
             batches_train = data_helper.batches_generate(list(data_train), epoch_size=200, batch_size=64)
             print("generator loaded!")
-            
+
             for batch in batches_train:
                 A_batch, B_batch, y_batch = zip(*batch)
                 train_step(A_batch, B_batch, y_batch)

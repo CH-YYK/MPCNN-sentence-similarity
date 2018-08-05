@@ -158,6 +158,7 @@ class MPCNN(object):
         """
         with tf.name_scope("Block_B_sent-%s" % sentence):
             pooled_output = {}
+            input = tf.reshape(input, [-1, self.sequence_length, 1, 1])
             for i, filter_size in enumerate(range(1, self.filter_sizes+1)):
                 with tf.name_scope("conv_filter_%s" % (i+1)):
                     filter_shape = [filter_size, 1, 1, self.num_filters]
@@ -169,29 +170,24 @@ class MPCNN(object):
                     b = tf.Variable(tf.constant(0.1, shape=[self.num_filters]), name='b')
 
                     max_pool, min_pool, avg_pool = [], [], []
-                    for i in range(input.shape[-2]):
-                        tmp = tf.expand_dims(input[:, :, i, :], axis=-2)
-                        conv = tf.nn.conv2d(tmp, W,
-                                            strides=[1,1,1,1],
-                                            padding="VALID")
+                    conv = tf.nn.conv2d(input, W,
+                                        strides=[1, 1, 1, 1],
+                                        padding="VALID")
+                    # conv: [batch_size * embedded_size, sequence_length - filter_size + 1, 1, num_filters]
 
-                        # apply non-linearity
-                        h = tf.nn.relu(tf.nn.bias_add(conv, b))
+                    h = tf.nn.relu(tf.nn.bias_add(conv, b))
+                    kernel_size = [1, self.sequence_length - filter_size + 1, 1, 1]
 
-                        # pooling output
-                        kernel_size = [1, self.sequence_length-filter_size+1, 1, 1]
-                        max_pooled = self.max_pool(h, kernel_size)
-                        min_pooled = self.min_pool(h, kernel_size)
-                        avg_pooled = self.avg_pool(h, kernel_size)
-
-                        max_pool.append(max_pooled)
-                        min_pool.append(min_pooled)
-                        avg_pool.append(avg_pooled)
+                    # pooling: [batch_size * embedded_size, sequence_length - filter_size + 1, 1, num_filters]
+                    max_pooled = self.max_pool(h, kernel_size)
+                    min_pooled = self.min_pool(h, kernel_size)
+                    avg_pooled = self.avg_pool(h, kernel_size)
 
                     # concatenate 'dim' elements of pooling output where dim = self.embedded_size
-                    max_pool = tf.concat(max_pool, axis=2)
-                    min_pool = tf.concat(min_pool, axis=2)
-                    avg_pool = tf.concat(avg_pool, axis=2)
+                    # pool: [batch_size, 1, embedded_size, num_filters]
+                    max_pool = tf.reshape(max_pooled, shape=[-1, 1, self.embedding_size, self.num_filters])
+                    min_pool = tf.reshape(min_pooled, shape=[-1, 1, self.embedding_size, self.num_filters])
+                    avg_pool = tf.reshape(avg_pooled, shape=[-1, 1, self.embedding_size, self.num_filters])
 
                     # pooling output for all filter_sizes
                     pooled_output['max_pool'] = pooled_output.get('max_pool', []) + [max_pool]
@@ -199,6 +195,7 @@ class MPCNN(object):
                     pooled_output['avg_pool'] = pooled_output.get('avg_pool', []) + [avg_pool]
 
             # concatenate pooling outputs for any filter sizes
+            # pool: [batch_size, filter_sizes, embedded_size, num_filters]
             pooled_output['max_pool'] = tf.concat(pooled_output['max_pool'], axis=1)
             pooled_output['min_pool'] = tf.concat(pooled_output['min_pool'], axis=1)
             pooled_output['avg_pool'] = tf.concat(pooled_output['avg_pool'], axis=1)
@@ -259,7 +256,7 @@ class MPCNN(object):
         output = tf.reduce_sum(input1_normalize * input2_normalize, axis=-2)
         return tf.reshape(output, shape=[-1, self.filter_sizes * self.num_filters])
 
-
+"""
 if __name__ == '__main__':
     word_vector = np.ones((6, 6))
     sequence_length = 6
@@ -278,3 +275,4 @@ if __name__ == '__main__':
                  test.input_2: np.array([[0, 1, 2, 3, 4, 5],[0,1,2,3,4,5]]).reshape([2, 6])}
 
     sess.run(test.pooled_output_A_1, feed_dict=feet_dict)
+"""
