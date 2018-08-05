@@ -69,7 +69,7 @@ class MPCNN(object):
             self.feab = tf.concat(self.feab, axis=1)
 
         self.h_pool_flat = tf.concat([self.feah, self.feaa, self.feab], axis=1)
-        total_num_filters = self.h_pool_flat.shape[1]  # 3 * (self.num_filters * self.filter_sizes * 2 + self.num_filters)
+        total_num_filters = self.num_filters + self.filter_sizes + self.num_filters * self.filter_sizes  # 3 * (self.num_filters * self.filter_sizes * 2 + self.num_filters)
 
         # dropout
         with tf.name_scope('Dropout'):
@@ -224,19 +224,6 @@ class MPCNN(object):
         """
         return tf.nn.avg_pool(input, ksize=ksize, strides=[1, 1, 1, 1], padding="VALID")
 
-    # distance method
-    def cosine_sim(self, array1, array2):
-        """
-        compute cosine similarity between two vectors
-        :param array1: array 1
-        :param array2: array 2
-        :return: the similarity score between 0 and 1
-        """
-        array1_norm = tf.nn.l2_normalize(array1, axis=0)
-        array2_norm = tf.nn.l2_normalize(array2, axis=0)
-        return 1-tf.losses.cosine_distance(array1_norm, array2_norm, axis=0)
-
-
     # compute distances
     def horizon_A(self, input1, input2):    # feah
         """
@@ -246,44 +233,34 @@ class MPCNN(object):
         input1 = tf.reshape(input1, shape=[-1, self.filter_sizes, self.num_filters])
         input2 = tf.reshape(input2, shape=[-1, self.filter_sizes, self.num_filters])
 
-        def func(m1, m2):
-            return [[self.cosine_sim(m1[:, i], m2[:, i]) for i in range(self.num_filters)]]
-
-        output = tf.concat([func(input1[i], input2[i]) for i in range(self.batch_size)], axis=0)
-        return output
+        input1_normalize = tf.nn.l2_normalize(input1, axis=1)
+        input2_normalize = tf.nn.l2_normalize(input2, axis=1)
+        return tf.reduce_sum(input1_normalize * input2_normalize, axis=1)
 
     def vertical_A(self, input1, input2):
         """
         input: [batch_size, filter_sizes, 1, num_filters]
-        :return: [batch_size, num_filters * filter_sizes]
+        :return: [batch_size, filter_sizes]#[batch_size, num_filters * filter_sizes]
         """
         input1 = tf.reshape(input1, shape=[-1, self.filter_sizes, self.num_filters])
         input2 = tf.reshape(input2, shape=[-1, self.filter_sizes, self.num_filters])
 
-        def func(m1, m2):
-            lis = []
-            for i in range(self.num_filters):
-                for j in range(self.filter_sizes):
-                    lis.append(self.cosine_sim(m1[:, i], m2[:,j]))
-            return [lis]
-
-        output = tf.concat([func(input1[i], input2[i]) for i in range(self.batch_size)], axis=0)
-        return output
+        input1_normalize = tf.nn.l2_normalize(input1, axis=-1)
+        input2_normalize = tf.nn.l2_normalize(input2, axis=-1)
+        return tf.reduce_sum(input1_normalize * input2_normalize, axis=-1) # [batch_size, filter_sizes]
 
     def vertical_B(self, input1, input2):
         """
         input: [batch_size, filter_sizes, embedded_size, num_filters]
         :return: [batch_size, filter_sizes * num_filters]
         """
+        input1_normalize = tf.nn.l2_normalize(input1, axis=-2)
+        input2_normalize = tf.nn.l2_normalize(input2, axis=-2)
 
-        def func(m1, m2):
-            lis = []
-            for i in range(self.filter_sizes):
-                lis += [self.cosine_sim(m1[i, :, j], m2[i, :, j]) for j in range(self.num_filters)]
-            return [lis]
-        output = tf.concat([func(input1[i], input2[i]) for i in range(self.batch_size)], axis=0)
-        return output
-"""
+        output = tf.reduce_sum(input1_normalize * input2_normalize, axis=-2)
+        return tf.reshape(output, shape=[-1, self.filter_sizes * self.num_filters])
+
+
 if __name__ == '__main__':
     batch_size = 2
     word_vector = np.ones((6, 6))
@@ -303,4 +280,3 @@ if __name__ == '__main__':
                  test.input_2: np.array([[0, 1, 2, 3, 4, 5],[0,1,2,3,4,5]]).reshape([2, 6])}
 
     sess.run(test.pooled_output_A_1, feed_dict=feet_dict)
-"""
