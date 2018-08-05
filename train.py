@@ -54,11 +54,10 @@ def train(A_train, B_train, A_dev, B_dev, y_train, y_dev, word_vector):
 
         sess = tf.Session(config=session_conf)
         with sess.as_default():
-            cnn = MPCNN(batch_size=64,
-                        embedding_size=word_vector.embedding_size,
+            cnn = MPCNN(embedding_size=word_vector.embedding_size,
                         sequence_length=word_vector.vocab_processor.max_document_length,
                         filter_sizes=5,
-                        num_filters=256,
+                        num_filters=150,
                         word_vector=word_vector.data)
 
             # Define training procedures
@@ -149,7 +148,7 @@ def train(A_train, B_train, A_dev, B_dev, y_train, y_dev, word_vector):
 
             # generate batches
             data_train = zip(A_train, B_train, y_train)
-            batches_train = data_helper.batches_generate(list(data_train), epoch_size=200, batch_size=cnn.batch_size)
+            batches_train = data_helper.batches_generate(list(data_train), epoch_size=200, batch_size=64)
 
             for batch in batches_train:
                 A_batch, B_batch, y_batch = zip(*batch)

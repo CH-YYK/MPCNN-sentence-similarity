@@ -11,20 +11,19 @@ class MPCNN(object):
     input_y: placeholder, float that represent similarity score
     """
 
-    def __init__(self, batch_size, sequence_length, embedding_size, filter_sizes, num_filters, word_vector, l2_reg_lambda=0.0):
+    def __init__(self, sequence_length, embedding_size, filter_sizes, num_filters, word_vector, l2_reg_lambda=0.0):
 
         # basic properties
         self.sequence_length = sequence_length
         self.embedding_size = embedding_size
         self.filter_sizes = filter_sizes
         self.num_filters = num_filters
-        self.batch_size = batch_size
 
 
         # define placeholders
-        self.input_1 = tf.placeholder(tf.int32, [batch_size, sequence_length], 'input_1')
-        self.input_2 = tf.placeholder(tf.int32, [batch_size, sequence_length], 'input_2')
-        self.input_y = tf.placeholder(tf.float32, [batch_size, 1], 'input_y')
+        self.input_1 = tf.placeholder(tf.int32, [None, sequence_length], 'input_1')
+        self.input_2 = tf.placeholder(tf.int32, [None, sequence_length], 'input_2')
+        self.input_y = tf.placeholder(tf.float32, [None, 1], 'input_y')
         self.dropout_keep_prob = tf.placeholder(tf.float32, name='Dropout_keep_prob')
 
         #
@@ -262,14 +261,13 @@ class MPCNN(object):
 
 
 if __name__ == '__main__':
-    batch_size = 2
     word_vector = np.ones((6, 6))
     sequence_length = 6
     embedding_size = 6
     filter_sizes = 4
     num_filters = 4
 
-    test = MPCNN(batch_size, sequence_length, embedding_size, filter_sizes, num_filters, word_vector)
+    test = MPCNN(sequence_length, embedding_size, filter_sizes, num_filters, word_vector)
 
     init = tf.global_variables_initializer()
     sess = tf.Session()
