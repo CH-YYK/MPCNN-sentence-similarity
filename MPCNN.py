@@ -11,13 +11,14 @@ class MPCNN(object):
     input_y: placeholder, float that represent similarity score
     """
 
-    def __init__(self, sequence_length, embedding_size, filter_sizes, num_filters, word_vector, l2_reg_lambda=0.0):
+    def __init__(self, sequence_length, embedding_size, filter_sizes, num_filters_A, num_filters_B, word_vector, l2_reg_lambda=0.0):
 
         # basic properties
         self.sequence_length = sequence_length
         self.embedding_size = embedding_size
         self.filter_sizes = filter_sizes
-        self.num_filters = num_filters
+        self.num_filters_A = num_filters_A
+        self.num_filters_B = num_filters_B
 
 
         # define placeholders
@@ -68,7 +69,7 @@ class MPCNN(object):
             self.feab = tf.concat(self.feab, axis=1)
 
         self.h_pool_flat = tf.concat([self.feah, self.feaa, self.feab], axis=1)
-        total_num_filters = self.num_filters + self.filter_sizes + self.num_filters * self.filter_sizes  # 3 * (self.num_filters * self.filter_sizes * 2 + self.num_filters)
+        total_num_filters = self.num_filters_A + self.filter_sizes + self.num_filters_B * self.filter_sizes  # 3 * (self.num_filters * self.filter_sizes * 2 + self.num_filters)
 
         # dropout
         with tf.name_scope('Dropout'):
@@ -77,8 +78,8 @@ class MPCNN(object):
 
         # fully connected layer
         with tf.name_scope('Fully-connected'):
-            out1 = contrib.layers.fully_connected(self.h_drop, num_outputs=150, activation_fn=tf.nn.tanh)
-            out2 = contrib.layers.fully_connected(out1, num_outputs=150)
+            out1 = contrib.layers.fully_connected(self.h_drop, num_outputs=300, activation_fn=tf.nn.tanh)
+            out2 = contrib.layers.fully_connected(out1, num_outputs=150, activation_fn=None)
 
         # output
         with tf.name_scope("output"):
@@ -117,13 +118,13 @@ class MPCNN(object):
             pooled_output = {}
             for i, filter_size in enumerate(range(1, self.filter_sizes+1)):
                 with tf.name_scope("conv_filter-%s" % (i + 1)):
-                    filter_shape = [filter_size, self.embedding_size, 1, self.num_filters]
+                    filter_shape = [filter_size, self.embedding_size, 1, self.num_filters_A]
 
                     # W: the initial value of filter map
                     W = tf.Variable(dtype=tf.float32, initial_value=tf.truncated_normal(shape=filter_shape, stddev=0.1), name="W")
 
                     # b: the initial value of bias
-                    b = tf.Variable(dtype=tf.float32, initial_value=tf.constant(0.1, shape=[self.num_filters]), name='b')
+                    b = tf.Variable(dtype=tf.float32, initial_value=tf.constant(0.1, shape=[self.num_filters_A]), name='b')
 
                     # convolutional layer
                     conv = tf.nn.conv2d(input,
@@ -161,13 +162,13 @@ class MPCNN(object):
             input = tf.reshape(input, [-1, self.sequence_length, 1, 1])
             for i, filter_size in enumerate(range(1, self.filter_sizes+1)):
                 with tf.name_scope("conv_filter_%s" % (i+1)):
-                    filter_shape = [filter_size, 1, 1, self.num_filters]
+                    filter_shape = [filter_size, 1, 1, self.num_filters_B]
 
                     # W: the initial value of filter map
                     W = tf.Variable(tf.truncated_normal(shape=filter_shape, stddev=0.1), name="W")
 
                     # b: the initial value of bias
-                    b = tf.Variable(tf.constant(0.1, shape=[self.num_filters]), name='b')
+                    b = tf.Variable(tf.constant(0.1, shape=[self.num_filters_B]), name='b')
 
                     max_pool, min_pool, avg_pool = [], [], []
                     conv = tf.nn.conv2d(input, W,
@@ -185,9 +186,9 @@ class MPCNN(object):
 
                     # concatenate 'dim' elements of pooling output where dim = self.embedded_size
                     # pool: [batch_size, 1, embedded_size, num_filters]
-                    max_pool = tf.reshape(max_pooled, shape=[-1, 1, self.embedding_size, self.num_filters])
-                    min_pool = tf.reshape(min_pooled, shape=[-1, 1, self.embedding_size, self.num_filters])
-                    avg_pool = tf.reshape(avg_pooled, shape=[-1, 1, self.embedding_size, self.num_filters])
+                    max_pool = tf.reshape(max_pooled, shape=[-1, 1, self.embedding_size, self.num_filters_B])
+                    min_pool = tf.reshape(min_pooled, shape=[-1, 1, self.embedding_size, self.num_filters_B])
+                    avg_pool = tf.reshape(avg_pooled, shape=[-1, 1, self.embedding_size, self.num_filters_B])
 
                     # pooling output for all filter_sizes
                     pooled_output['max_pool'] = pooled_output.get('max_pool', []) + [max_pool]
@@ -226,8 +227,8 @@ class MPCNN(object):
         input: [batch_size, filter_sizes, 1, num_filters]
         :return: [batch_size, num_filters]
         """
-        input1 = tf.reshape(input1, shape=[-1, self.filter_sizes, self.num_filters])
-        input2 = tf.reshape(input2, shape=[-1, self.filter_sizes, self.num_filters])
+        input1 = tf.reshape(input1, shape=[-1, self.filter_sizes, self.num_filters_A])
+        input2 = tf.reshape(input2, shape=[-1, self.filter_sizes, self.num_filters_A])
 
         input1_normalize = tf.nn.l2_normalize(input1, axis=1)
         input2_normalize = tf.nn.l2_normalize(input2, axis=1)
@@ -238,8 +239,8 @@ class MPCNN(object):
         input: [batch_size, filter_sizes, 1, num_filters]
         :return: [batch_size, filter_sizes]#[batch_size, num_filters * filter_sizes]
         """
-        input1 = tf.reshape(input1, shape=[-1, self.filter_sizes, self.num_filters])
-        input2 = tf.reshape(input2, shape=[-1, self.filter_sizes, self.num_filters])
+        input1 = tf.reshape(input1, shape=[-1, self.filter_sizes, self.num_filters_A])
+        input2 = tf.reshape(input2, shape=[-1, self.filter_sizes, self.num_filters_A])
 
         input1_normalize = tf.nn.l2_normalize(input1, axis=-1)
         input2_normalize = tf.nn.l2_normalize(input2, axis=-1)
@@ -254,7 +255,7 @@ class MPCNN(object):
         input2_normalize = tf.nn.l2_normalize(input2, axis=-2)
 
         output = tf.reduce_sum(input1_normalize * input2_normalize, axis=-2)
-        return tf.reshape(output, shape=[-1, self.filter_sizes * self.num_filters])
+        return tf.reshape(output, shape=[-1, self.filter_sizes * self.num_filters_B])
 
 """
 if __name__ == '__main__':
