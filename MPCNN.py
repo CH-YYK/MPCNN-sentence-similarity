@@ -78,7 +78,7 @@ class MPCNN(object):
         # fully connected layer
         with tf.name_scope('Fully-connected'):
             out1 = contrib.layers.fully_connected(self.h_drop, num_outputs=150, activation_fn=tf.nn.tanh)
-            out2 = contrib.layers.fully_connected(self.h_drop, num_outputs=150)
+            out2 = contrib.layers.fully_connected(out1, num_outputs=150)
 
         # output
         with tf.name_scope("output"):

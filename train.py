@@ -31,7 +31,7 @@ def preprocess():
     y_shuffled = y[shuffle_indices]
 
     # split train/dev set
-    dev_sample_index = -1*int(0.2 * float(len(y)))
+    dev_sample_index = -1*int(0.01 * float(len(y)))
     A_train, A_dev = A_shuffled[:dev_sample_index], A_shuffled[dev_sample_index:]
     B_train, B_dev = B_shuffled[:dev_sample_index], B_shuffled[dev_sample_index:]
     y_train, y_dev = y_shuffled[:dev_sample_index], y_shuffled[dev_sample_index:]
@@ -58,8 +58,8 @@ def train(A_train, B_train, A_dev, B_dev, y_train, y_dev, word_vector):
             print("define cnn model")
             cnn = MPCNN(embedding_size=word_vector.embedding_size,
                         sequence_length=word_vector.vocab_processor.max_document_length,
-                        filter_sizes=5,
-                        num_filters=150,
+                        filter_sizes=4,
+                        num_filters=100,
                         word_vector=word_vector.data)
             print("cnn model loaded")
             # Define training procedures
@@ -118,7 +118,7 @@ def train(A_train, B_train, A_dev, B_dev, y_train, y_dev, word_vector):
                     cnn.input_1: A_batch,
                     cnn.input_2: B_batch,
                     cnn.input_y: y_batch,
-                    cnn.dropout_keep_prob: 1.0
+                    cnn.dropout_keep_prob: 0.8
                 }
 
                 _, step, summaries, loss, pearson = sess.run([train_op, global_step, train_summary_op, cnn.loss, cnn.pearson],
@@ -151,15 +151,17 @@ def train(A_train, B_train, A_dev, B_dev, y_train, y_dev, word_vector):
             # generate batches
             print("generate batches...")
             data_train = zip(A_train, B_train, y_train)
-            batches_train = data_helper.batches_generate(list(data_train), epoch_size=200, batch_size=64)
+            batches_train = data_helper.batches_generate(list(data_train), epoch_size=200, batch_size=32)
             print("generator loaded!")
 
             for batch in batches_train:
                 A_batch, B_batch, y_batch = zip(*batch)
                 train_step(A_batch, B_batch, y_batch)
                 current_step = tf.train.global_step(sess, global_step)
+
                 if current_step % 100 == 0:
                     print("\n Evaluation:")
+
                     dev_step(A_dev, B_dev, y_dev)
                     print("")
                 if current_step % 100 == 0:
