@@ -11,7 +11,7 @@ class MPCNN(object):
     input_y: placeholder, float that represent similarity score
     """
 
-    def __init__(self, sequence_length, embedding_size, filter_sizes, num_filters_A, num_filters_B, word_vector, l2_reg_lambda=0.0):
+    def __init__(self, sequence_length, embedding_size, filter_sizes, num_filters_A, num_filters_B, word_vector, l2_reg_lambda=1e-4):
 
         # basic properties
         self.sequence_length = sequence_length
@@ -79,7 +79,7 @@ class MPCNN(object):
         # fully connected layer
         with tf.name_scope('Fully-connected'):
             out1 = contrib.layers.fully_connected(self.h_drop, num_outputs=300, activation_fn=tf.nn.tanh)
-            out2 = contrib.layers.fully_connected(out1, num_outputs=150, activation_fn=None)
+            out2 = contrib.layers.fully_connected(out1, num_outputs=150, activation_fn=tf.nn.log_softmax)
 
         # output
         with tf.name_scope("output"):
@@ -94,7 +94,7 @@ class MPCNN(object):
         # scores and predictions
         with tf.name_scope('loss'):
             self.loss = tf.square(self.scores - self.input_y)
-            self.loss = tf.reduce_mean(self.loss) + l2_reg_lambda * l2_loss
+            self.loss = tf.reduce_mean(self.loss) + l2_reg_lambda * l2_loss/2
 
         # pearson prediction
         with tf.name_scope('Pearson'):
@@ -133,7 +133,7 @@ class MPCNN(object):
                                         padding="VALID")
 
                     # apply non-linearity
-                    h = tf.nn.relu(tf.nn.bias_add(conv, b), name='relu')
+                    h = tf.nn.tanh(tf.nn.bias_add(conv, b), name='relu')
 
                     kernel_size = [1, self.sequence_length - filter_size + 1, 1, 1]
                     max_pooled = self.max_pool(h, ksize=kernel_size)
@@ -176,7 +176,7 @@ class MPCNN(object):
                                         padding="VALID")
                     # conv: [batch_size * embedded_size, sequence_length - filter_size + 1, 1, num_filters]
 
-                    h = tf.nn.relu(tf.nn.bias_add(conv, b))
+                    h = tf.nn.tanh(tf.nn.bias_add(conv, b))
                     kernel_size = [1, self.sequence_length - filter_size + 1, 1, 1]
 
                     # pooling: [batch_size * embedded_size, sequence_length - filter_size + 1, 1, num_filters]

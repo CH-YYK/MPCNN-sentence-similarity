@@ -16,7 +16,7 @@ def preprocess():
     print("load data ...")
     sentence_A, sentence_B, y = data_helper.load_data('data/SICK_data.txt')
     # load pre-trained word vector and build vocabulary.
-    word_vector = data_helper.word_vector('data/glove.6B.100d.txt')
+    word_vector = data_helper.word_vector('data/glove.6B.300d.txt')
     max_document_length = max([len(x.split(' ')) for x in sentence_A + sentence_B])
     word_vector.vocab_processor.max_document_length = max_document_length
 
@@ -58,7 +58,7 @@ def train(A_train, B_train, A_dev, B_dev, y_train, y_dev, word_vector):
             print("define cnn model")
             cnn = MPCNN(embedding_size=word_vector.embedding_size,
                         sequence_length=word_vector.vocab_processor.max_document_length,
-                        filter_sizes=4,
+                        filter_sizes=6,
                         num_filters_A=200,
                         num_filters_B=20,
                         word_vector=word_vector.data)
@@ -152,7 +152,7 @@ def train(A_train, B_train, A_dev, B_dev, y_train, y_dev, word_vector):
             # generate batches
             print("generate batches...")
             data_train = zip(A_train, B_train, y_train)
-            batches_train = data_helper.batches_generate(list(data_train), epoch_size=150, batch_size=32)
+            batches_train = data_helper.batches_generate(list(data_train), epoch_size=150, batch_size=50)
             print("generator loaded!")
 
             for batch in batches_train:
