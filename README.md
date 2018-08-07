@@ -3,10 +3,11 @@ README is on the way. This project is based on paper [**Multi-Perspective Senten
 with Convolutional Neural Networks**](http://ttic.uchicago.edu/~kgimpel/papers/he+etal.emnlp15.pdf). 
 
 ### Information
-dataset: SICK.txt
-pre-trained word vector: gloVe-300-dimension.
-pearson_train **r**: 0.99
-pearson_test **r**: 0.80
+
+1. dataset: SICK.txt
+2. pre-trained word vector: gloVe-300-dimension.
+3. pearson_train **r**: 0.99
+4. pearson_test **r**: 0.80
 
 **Cannot achieve 0.90 as the paper said.**
 
