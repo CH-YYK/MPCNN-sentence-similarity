@@ -1,5 +1,8 @@
 # MPCNN-sentence-similarity
-README is on the way. This project is based on paper [**Multi-Perspective Sentence Similarity Modeling
+
+Dataset is too large to upload to Github. Since datasets used are public and open-source, I will only leave the names here.
+
+This project is based on paper [**Multi-Perspective Sentence Similarity Modeling
 with Convolutional Neural Networks**](http://ttic.uchicago.edu/~kgimpel/papers/he+etal.emnlp15.pdf). 
 
 ### Information
