@@ -69,7 +69,7 @@ class MPCNN(object):
             self.feab = tf.concat(self.feab, axis=1)
 
         self.h_pool_flat = tf.concat([self.feah, self.feaa, self.feab], axis=1)
-        total_num_filters = self.num_filters_A + self.filter_sizes + self.num_filters_B * self.filter_sizes  # 3 * (self.num_filters * self.filter_sizes * 2 + self.num_filters)
+        total_num_filters = self.num_filters_A + self.filter_sizes * self.filter_sizes + self.num_filters_B * self.filter_sizes  # 3 * (self.num_filters * self.filter_sizes * 2 + self.num_filters)
 
         # dropout
         with tf.name_scope('Dropout'):
@@ -244,7 +244,9 @@ class MPCNN(object):
 
         input1_normalize = tf.nn.l2_normalize(input1, axis=-1)
         input2_normalize = tf.nn.l2_normalize(input2, axis=-1)
-        return tf.reduce_sum(input1_normalize * input2_normalize, axis=-1) # [batch_size, filter_sizes]
+
+        product = tf.matmul(input1_normalize, input2_normalize, transpose_b=True)
+        return tf.reshape(product, shape=[-1, self.filter_sizes * self.filter_sizes])  # [batch_size, filter_sizes * filter_sizes]
 
     def vertical_B(self, input1, input2):
         """
