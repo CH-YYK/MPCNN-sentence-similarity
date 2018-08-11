@@ -106,6 +106,16 @@ class MPCNN(object):
 
             self.pearson = numerator / denominator
 
+        # kl_divergence
+        with tf.name_scope('KL_divergence'):
+
+            self.scores_dist = tf.distributions.Categorical(probs=self.scores/tf.reduce_sum(self.scores))
+            self.input_y_dist = tf.distributions.Categorical(probs=self.input_y/tf.reduce_sum(self.input_y))
+
+            self.kl_divergence = tf.distributions.kl_divergence(self.input_y_dist, self.scores_dist)
+            self.kl_loss = tf.reduce_mean(self.kl_divergence) + l2_reg_lambda * l2_loss/2
+
+
     # Blocks
     def block_A(self, input, sentence=1):
         """
