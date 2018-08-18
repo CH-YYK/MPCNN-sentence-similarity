@@ -33,7 +33,7 @@ class MPCNN(object):
         with tf.name_scope('Sentence_model'):
             # embedding layer
             with tf.device("/cpu:0"), tf.name_scope('embedding'):
-                W = tf.Variable(dtype=tf.float32, initial_value=word_vector, name="embedding_weight")
+                W = tf.Variable(dtype=tf.float32, initial_value=word_vector, name="embedding_weight", trainable=False)
 
                 # embedding layer for both two types of sentences
                 self.embedded_chars_1 = tf.nn.embedding_lookup(W, self.input_1)
